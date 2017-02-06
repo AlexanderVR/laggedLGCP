@@ -77,6 +77,9 @@ lag_poisson_fit <- function(events,
   # Package the hyperparameters together
   pars <- c(pars, as.list(data.frame(t(hyp_opt))))
 
+  # Just a plain Poisson point process likelihood
+  pars$coalescent <- 0
+  
   # Now train joint GP stan model, with the above fixed hyperparameters
   fit <- sampling(stanmodels$multiple_gp_nonsep_fixed, 
                   data=pars, 
@@ -87,7 +90,7 @@ lag_poisson_fit <- function(events,
                   pars=c("re", "im", "x", "cor"), include=FALSE) # ignore high-dimensional latent variables
 
   # extract quantiles for all posterior samples
-  samples <- extract(fit, permuted=TRUE)
+  samples <- rstan::extract(fit, permuted=TRUE)
   rates <- samples$rates
   quantiles <- list()
   for (param in names(samples)) {
@@ -96,7 +99,7 @@ lag_poisson_fit <- function(events,
       quantiles[[param]] <- quantile(samp, probs = prob_quantiles)
     else {
       n_dim <- length(dim(samp))
-      quantiles[[param]] <- apply(rj, MARGIN=2:n_dim,
+      quantiles[[param]] <- apply(samp, MARGIN=2:n_dim,
                     FUN=function(x) quantile(x, probs=prob_quantiles))
     }
   }

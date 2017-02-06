@@ -2,7 +2,7 @@ Package: laggedLGCP
 Type: Package
 Title: What the package does (short line)
 Version: 1.0
-Date: 2017-02-03
+Date: 2017-02-05
 Author: Who wrote it
 Maintainer: Who to complain to <yourfault@somewhere.net>
 Description: More about what it does (maybe more than one line)
@@ -10,12 +10,10 @@ License: What license is it under?
 Depends:
     R (>= 3.0.2),
     Rcpp (>= 0.12.8),
-    methods (>= 3.3.2),
-    rstan (>= 2.14.1)
+    methods (>= 3.3.2)
 Imports:
     rstan (>= 2.14.1),
-    rstantools (>= 1.1.0),
-    phylodyn
+    rstantools (>= 1.1.0)
 LinkingTo: StanHeaders (>= 2.14.0), rstan (>= 2.14.1), BH (>= 1.62.0.1), Rcpp
     (>= 0.12.8), RcppEigen (>= 0.3.2.9.0)
 RoxygenNote: 5.0.1
