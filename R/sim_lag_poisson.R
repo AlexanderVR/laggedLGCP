@@ -67,5 +67,6 @@ bin_poisson <- function(times, n_bins=100, st=NULL, fin=NULL) {
     counts[,k] <- hist(y, breaks=bins, plot=FALSE)$counts
   }
   return(list(counts=counts, breaks=bins, offset=offset, delta=dt, N=n_bins, 
-              N_vis = rep(n_bins, n_series, labels=names(times)), n_series=n_series))
+              N_vis = rep(n_bins, n_series, labels=names(times)), n_series=n_series,
+              coalescent = 0))
 }

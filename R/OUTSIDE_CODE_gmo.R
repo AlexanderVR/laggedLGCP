@@ -63,7 +63,7 @@
 #' @import methods
 #' @importFrom rstan stan optimizing vb sampling constrain_pars log_prob grad_log_prob stan_model get_stanmodel
 #' @importFrom loo psislw
-#' @export
+#' 
 gmo <- function(file, local_file, full_model, data,
   method=c("laplace"), init="random",
   draws=5L, iter=100L, inner_iter=10L, cond_iter=NA, eta=1,
@@ -165,7 +165,6 @@ gmo <- function(file, local_file, full_model, data,
 #'
 #' @import methods
 #' @importFrom rstan stan optimizing vb sampling constrain_pars log_prob grad_log_prob stan_model
-#' @export
 gmo_approx <- function(file, local_file, full_model, data,
   method=c("laplace", "vb", "sampling"), init="random",
   draws=5L, iter=100L, inner_iter=10L, cond_iter=NA, eta=1,

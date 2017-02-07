@@ -133,7 +133,6 @@ count_params <- function(object, params) {
 #'
 #' Take alpha from mean of samples. (This is used for warm starts.)
 #'
-#' @export
 alpha_mean <- function(g_alpha) {
   samples <- extract(g_alpha)
   alpha <- list()
@@ -151,7 +150,6 @@ alpha_mean <- function(g_alpha) {
   return(alpha)
 }
 
-#' @export
 compute_z_score <- function(x, ...) UseMethod("compute_z_score")
 
 #' compute_z_score
@@ -159,7 +157,6 @@ compute_z_score <- function(x, ...) UseMethod("compute_z_score")
 #' Calculate z-score of parameter estimates from a vector using the
 #' the true posterior mean and standard deviation (based on MCMC).
 #'
-#' @export
 compute_z_score.default <- function(par, fit.stan) {
   fit.stan <- extract(fit.stan)
   par_stan <- apply(fit.stan$phi, 2, mean)
@@ -182,7 +179,6 @@ compute_z_score.default <- function(par, fit.stan) {
 #' For i=1,...,length(phi),
 #'   z_i = ( (phi^{GMO}_i - mean^{MCMC}(phi_i) ) / sd^{MCMC}(phi_i)
 #'
-#' @export
 compute_z_score.gmo <- function(fit.gmo, fit.stan) {
   fit.stan <- extract(fit.stan)
   par_stan <- apply(fit.stan$phi, 2, mean)
@@ -194,7 +190,6 @@ compute_z_score.gmo <- function(fit.gmo, fit.stan) {
 #' extract_stan_params
 #'
 #' Returns vector of parameters.
-#' @export
 extract_stan_params <- function(fit.stan) {
   fit.stan <- extract(fit.stan)
   par_stan <- apply(fit.stan$phi, 2, mean)
@@ -204,7 +199,6 @@ extract_stan_params <- function(fit.stan) {
 #' extract_lme_params
 #'
 #' Returns vector of fixed effects and variance components.
-#' @export
 extract_lme_params <- function(fit.lme) {
   return(c(attributes(fit.lme)$beta,
            as.data.frame(VarCorr(fit.lme))$sdcor))
