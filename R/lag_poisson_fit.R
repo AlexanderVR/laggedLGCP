@@ -28,7 +28,7 @@ fit_LGCP_lag <- function(events,
   stopifnot(any(likelihood == c('poisson', 'coalescent')))
   
   # set defaults for GMO and stan fitting
-  fitting_defaults <- list(n_chains = 2, 
+  fitting_defaults <- list(n_chains = 1, 
                            n_samples = 1000,
                            refresh = 10, 
                            gmo_iter = 100, 

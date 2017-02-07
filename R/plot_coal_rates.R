@@ -23,10 +23,13 @@ plot_results <- function(res, quant_level = 1) {
   # append bin midpoints
   mids <- res$data$breaks[-1] - diff(res$data$breaks) / 2
   for (j in 1 : res$data$n_series) {
-    #if (j==1 && res$data$coalescent) 
-    #  rj = 1/rj  # N_e(t) = 1 / x_1(t)
+    if (j==1 && res$data$coalescent) 
+      quant = 1/quants[,,j]   # N_e(t) = 1 / x_1(t)
+    else
+      quant = quants[,,j]
+      
     # plot j'th process
-    gp_plotting(mids, quants[,,j])
+    gp_plotting(mids, quant)
     if (res$data$coalescent) {
       if (j==1)
         yl <- "Eff. Pop. Size"

@@ -64,7 +64,7 @@ bin_coal <- function(coal_times, samp_times, n_sampled, n_bins) {
   offset[, 2] <- delta
 
   poisson_args <- list(counts=counts, breaks=grid, offset=offset, delta=delta,
-                       N_vis=c(init$ng, Nvis_samp), N=init$ng, coalescent=1)
+                       N_vis=c(init$ng, Nvis_samp), N=init$ng, n_series=2, coalescent=1)
 
   return(poisson_args)
 

@@ -19,6 +19,13 @@ data {
   vector<lower=0>[n_series] sigma;
 }
 
+transformed data {
+  vector[n_series] signs;
+  signs = rep_vector(1, n_series);
+  // coalescence rate is proportional to 1/N_e(t)
+  signs[1] = coalescent ? -1. : 1.;
+}
+
 parameters {
   cholesky_factor_corr[n_series] cor;
   vector[n_series - 1] shifts;
@@ -31,14 +38,9 @@ transformed parameters {
 
   for (j in 1:n_series) {
     real shift;
-    real signs;
-    if (coalescent && (j == 1))
-      signs = -1; // coalescence rate is proportional to 1/N_e(t)
-    else
-      signs = 1;  
 
     shift = (j == n_series) ? 0. : shifts[j]; // last process has shift = 0.
-    x[, j] = signs * transform_to_matern(re[, j], im[, j], Ntot, nu[j], lengthscale[j], delta, shift);
+    x[, j] = signs[j] * transform_to_matern(re[, j], im[, j], Ntot, nu[j], lengthscale[j], delta, shift);
   }
 
 }
@@ -60,6 +62,6 @@ generated quantities {
   matrix[N, n_series] rates;
   matrix[n_series, n_series] correlations;
 
-  rates = exp(diag_post_multiply(x[1:N, ], sigma) + rep_matrix(mu', N));
+  rates = exp(diag_post_multiply(x[1:N, ], sigma .* signs)  + rep_matrix(mu', N));
   correlations = cor * cor';
 }
