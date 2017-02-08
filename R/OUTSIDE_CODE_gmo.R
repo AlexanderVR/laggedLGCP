@@ -406,7 +406,6 @@ GMO <- setRefClass("gmo",
 
         flags <- diagnostic$check_converge(par, log_p$fn, log_p$grad)
         if (sum(flags) > 0) {
-          print(flags)
           print("Optimization terminated normally:")
           print(.get_code_string(flags))
           cov <<- matrix(0, 1,1) # est_covariance(par, log_p=log_p, alpha_sims=alpha_sims, m=m)
