@@ -26,16 +26,20 @@ plot_results <- function(res, quant_level = 1) {
     # plot j'th process
     gp_plotting(mids, quants[,,j])
     if (res$data$coalescent) {
-      if (j==1)
+      if (j==1) {
         yl <- "Eff. Pop. Size"
-      else
+        points(res$events$coal_times, rep(0, length(res$events$coal_times)), pch=3)
+      } else {
         yl <- "Sampling Rate"
+        points(res$events$samp_times, rep(0, length(res$events$samp_times)), pch=3)
+      }
     } else {
       yl <- sprintf('Poisson rate for process %d', j)
+      points(res$events[[j]], rep(0, length(res$events[[j]])), pch=3)
     }
     title(ylab=yl)
     if (j==1) title(main = maintitle)
-    points(res$events[[j]], rep(0, length(res$events[[j]])), pch=3)
+    
   }
   title(xlab = res$data$time_unit)
 }
@@ -64,6 +68,7 @@ gp_plotting <- function(midpoints, quantiles){
 #' 
 #' @param fit Output of fit_LGCP_lag()
 #' @param traj True effective pop. size trajectory (if known)
+#' @param ... Other args to pass to plot_BNPR
 #' 
 plot_coal_result <- function(fit, traj = NULL, ...) {
   grid <- fit$data$breaks
