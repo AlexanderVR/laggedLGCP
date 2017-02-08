@@ -13,7 +13,7 @@
 #' effective population size N_e(t).
 #' @param scaling Constant scaling factor for the overall Poisson rate.
 #' 
-#' @importFrom phylodyn inla.models cyclic_traj boombust_traj pref_sample coalsim BNPR BNPR_PS
+#' @importFrom phylodyn cyclic_traj boombust_traj pref_sample coalsim BNPR BNPR_PS
 #' 
 sim_lag_coalescent <- function(lag=0, type='cyclic', c=50, beta=0.5, scaling=.1) {
   
@@ -35,13 +35,6 @@ sim_lag_coalescent <- function(lag=0, type='cyclic', c=50, beta=0.5, scaling=.1)
   sim <- coalsim(samp_times=sampling_times, n_sampled=n_samples, traj=coal_fun)
   events = sim[c('coal_times', 'samp_times', 'n_sampled')]
   
-  inla_res <- list()
-  inla_res$no_ps <- BNPR(data = sim, lengthout = 100)
-  #plot_BNPR(res, traj = coal_fun, main="Without preferential sampling",heatmaps=TRUE)
-  
-  inla_res$ps <- BNPR_PS(data = sim, lengthout = 100)
-  #plot_BNPR(res2, traj = coal_fun, main="With PS",heatmaps=TRUE)
-  
-  return(list(events=events, lag=lag, type=type, inla_res=inla_res,
+  return(list(events=events, lag=lag, type=type,
               rate_functions=list(coal_fun=coal_fun, samp_fun=samp_fun)))
 }
