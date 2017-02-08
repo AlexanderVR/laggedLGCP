@@ -13,6 +13,8 @@
 #' @param prob_quantiles Which quantiles of the latent parameters should be returned?
 #' @param return_stanfit If TRUE, the returned list includes the stanfit object containing all MCMC samples.
 #' @param fitting_args Additional list of arguments that affect the marginal GMO fitting and MCMC simulation code.
+#' 
+#' @useDynLib laggedLGCP, .registration = TRUE
 #'
 fit_LGCP_lag <- function(events,
                             time_unit = 'Weeks',
