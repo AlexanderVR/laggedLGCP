@@ -23,13 +23,8 @@ plot_results <- function(res, quant_level = 1) {
   # append bin midpoints
   mids <- res$data$breaks[-1] - diff(res$data$breaks) / 2
   for (j in 1 : res$data$n_series) {
-    if (j==1 && res$data$coalescent) 
-      quant = 1/quants[,,j]   # N_e(t) = 1 / x_1(t)
-    else
-      quant = quants[,,j]
-      
     # plot j'th process
-    gp_plotting(mids, quant)
+    gp_plotting(mids, quants[,,j])
     if (res$data$coalescent) {
       if (j==1)
         yl <- "Eff. Pop. Size"
@@ -61,4 +56,27 @@ gp_plotting <- function(midpoints, quantiles){
   polygon(x_points, y_points, col=adjustcolor("gray",alpha.f=0.5),border="gray",lty=1,lwd=.5)
   points(midpoints,quantiles[1, ],col="black",type="l",lwd=0.5)
   points(midpoints,quantiles[3, ],col="black",type="l",lwd=0.5)
+}
+
+#' Plot posterior effective pop. size using phylodyn's plot_BNPR code
+#' 
+#' @export
+#' 
+#' @param fit Output of fit_LGCP_lag()
+#' @param traj True effective pop. size trajectory (if known)
+#' 
+plot_coal_result <- function(fit, traj = NULL, ...) {
+  grid <- fit$data$breaks
+  x <- grid[-1] - diff(grid) / 2
+  effpop025 <- fit$quantiles$rates['2.5%', , 1]
+  effpop975 <- fit$quantiles$rates['97.5%', , 1]
+  effpop <- fit$quantiles$rates['50%', , 1]
+  samp_times <- fit$events$samp_times
+  coal_times <- fit$events$coal_times
+  n_sampled <- fit$events$n_sampled
+  
+  res <- list(samp_times=samp_times, coal_times=coal_times, n_sampled=n_sampled,
+              x=x, grid=grid, effpop=effpop, effpop025=effpop025, effpop975=effpop975)
+  plot_BNPR(res, traj=traj, ...)
+  
 }

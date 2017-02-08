@@ -21,7 +21,7 @@ fit_LGCP_lag <- function(events,
                             max_lag = 5,
                             max_n_frequencies = 1023, 
                             min_percent_padding = 10.0, 
-                            prob_quantiles = c(.05, .25),
+                            prob_quantiles = c(.025, .25),
                             return_stanfit = FALSE,
                             fitting_args = list()) {
 
@@ -74,18 +74,23 @@ fit_LGCP_lag <- function(events,
   # marginal process fitting function
   marginal_optimize <- function(k) {
     ind_pars <- split_data(pars, k)
+    if (k==2 && pars$coalescent) {
+      # second process (sampling) does not have the coalescent likelihood. 
+      ind_pars$coalescent = 0
+    }
+    print(ind_pars$coalescent)
     sfit=sampling(stanmodels$single_gp_fixed_gmo, data = c(ind_pars, list(GMO_FLAG = FALSE, fixed_phi = double())),
          chains = 0, iter = 1)
-    u_opt <- gmo(full_model=sfit, 
+    opt_res <- gmo(full_model=sfit, 
                  data = ind_pars, 
                  iter = as.integer(fitting_defaults$gmo_iter),
                  tol = fitting_defaults$gmo_tol, 
                  eta = fitting_defaults$gmo_eta, 
                  draws = as.integer(fitting_defaults$gmo_draws), 
                  init = get_init(ind_pars, lengthscale=fitting_defaults$gmo_init_lengthscale),
-                 max_block_size = fitting_defaults$gmo_max_block_size
-                 )$par
+                 max_block_size = fitting_defaults$gmo_max_block_size)
 
+    u_opt <- opt_res$par
     return(c(mu=u_opt[1], sigma=exp(u_opt[2]), lengthscale=exp(u_opt[3]), nu=exp(u_opt[4])))
   }
   # optimize hyperparameters of each marginal latent GP
@@ -126,7 +131,8 @@ fit_LGCP_lag <- function(events,
   }
 
   # Data to return
-  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = pars, events=events)
+  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = pars, 
+              events=events)
   if (return_stanfit)
     res$stanfit <- fit
   return(res)

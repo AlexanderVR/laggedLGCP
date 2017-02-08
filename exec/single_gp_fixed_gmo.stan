@@ -9,10 +9,17 @@ data {
   int<lower=1, upper=Ntot/2 - 1> n_nonzero_freq; // number of non-zero frequencies to use
   int<lower=0> counts[N];
   vector[N] offset;
+  int<lower=0, upper=1> coalescent;
   real<lower=0> delta;
   int<lower=0> npars;
   int<lower=0, upper=1> GMO_FLAG;
   vector[npars * GMO_FLAG] fixed_phi;
+}
+
+transformed data {
+  real signs;
+  // coalescence rate is proportional to 1/N_e(t)
+  signs = (coalescent==1) ? -1 : 1;
 }
 
 parameters {
@@ -53,8 +60,8 @@ model {
   mu ~ normal(0, 5);
   nu ~ normal(0, 1);
   target += log(nu);
-
-  counts[1:N_vis] ~ poisson_log(x[1:N_vis] * sigma + mu + log(offset[1:N_vis]));
+  
+  counts[1:N_vis] ~ poisson_log(signs * (x[1:N_vis] * sigma + mu) + log(offset[1:N_vis]));
   
 }
 

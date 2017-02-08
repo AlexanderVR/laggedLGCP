@@ -21,9 +21,8 @@ data {
 
 transformed data {
   vector[n_series] signs;
-  signs = rep_vector(1, n_series);
-  // coalescence rate is proportional to 1/N_e(t)
-  signs[1] = coalescent ? -1. : 1.;
+  for (j in 1:n_series)
+    signs[j] = (j==1 && coalescent==1) ? -1 : 1;
 }
 
 parameters {
@@ -40,7 +39,7 @@ transformed parameters {
     real shift;
 
     shift = (j == n_series) ? 0. : shifts[j]; // last process has shift = 0.
-    x[, j] = signs[j] * transform_to_matern(re[, j], im[, j], Ntot, nu[j], lengthscale[j], delta, shift);
+    x[, j] = transform_to_matern(re[, j], im[, j], Ntot, nu[j], lengthscale[j], delta, shift);
   }
 
 }
@@ -54,7 +53,8 @@ model {
   cor ~ lkj_corr_cholesky(1.);
   
   for (j in 1:n_series) {
-    counts[1:N_vis[j], j] ~ poisson_log(x[1:N_vis[j], j] * sigma[j] + mu[j] + log(offset[1:N_vis[j], j]));
+    // coalescence rate is proportional to 1/N_e(t)
+    counts[1:N_vis[j], j] ~ poisson_log(signs[j] * (x[1:N_vis[j], j] * sigma[j] + mu[j]) + log(offset[1:N_vis[j], j]));
   }
 }
 
@@ -62,6 +62,6 @@ generated quantities {
   matrix[N, n_series] rates;
   matrix[n_series, n_series] correlations;
 
-  rates = exp(diag_post_multiply(x[1:N, ], sigma .* signs)  + rep_matrix(mu', N));
+  rates = exp(diag_post_multiply(x[1:N, ], sigma) + rep_matrix(mu', N));
   correlations = cor * cor';
 }
