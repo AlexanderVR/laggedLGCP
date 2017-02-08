@@ -27,7 +27,7 @@ transformed data {
 
 parameters {
   cholesky_factor_corr[n_series] cor;
-  vector[n_series - 1] shifts;
+  vector<lower=-max_lag, upper=max_lag>[n_series - 1] shifts;
   matrix[n_nonzero_freq, n_series] re;
   matrix[n_nonzero_freq, n_series] im;
 }
@@ -49,7 +49,6 @@ model {
     im[n, ] ~ multi_normal_cholesky(rep_vector(0, n_series), cor / sqrt(2));
   }
   
-  shifts ~ normal(0, max_lag / 2.);
   cor ~ lkj_corr_cholesky(1.);
   
   for (j in 1:n_series) {
