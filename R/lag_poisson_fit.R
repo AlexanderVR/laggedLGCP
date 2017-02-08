@@ -3,11 +3,11 @@
 #' @export
 #' 
 #' @param events A list of vectors of timestamps, one vector for each observed process.
+#' @param max_lag Lag parameter constrained to lie within [-max_lag, max_lag].
 #' @param time_unit Unit of measurement for the timestamps.
 #' @param likelihood Either 'poisson' or 'coalescent'. If 'coalescent', param EVENTS must contain
 #' vectors named 'coal_times', 'samp_times', and 'n_sampled'.
-#' @param n_bins Number of bins to use for binning the events
-#' @param max_lag Place a Normal(0, sigma=max_lag/2) prior on the lag parameter.
+#' @param n_bins Number of bins to use for binning the events.
 #' @param max_n_frequencies Maximum number of cosine and sine basis functions to use in spectral representation.
 #' @param min_percent_padding How far to extend the domain of the latent (periodic) Gaussian process.
 #' @param prob_quantiles Which quantiles of the latent parameters should be returned?
@@ -16,28 +16,43 @@
 #' 
 #' @useDynLib laggedLGCP, .registration = TRUE
 #'
-fit_LGCP_lag <- function(events,
-                            time_unit = 'Weeks',
-                            likelihood = 'poisson',
-                            n_bins = 100, 
-                            max_lag = 5,
-                            max_n_frequencies = 1023, 
-                            min_percent_padding = 10.0, 
-                            prob_quantiles = c(.025, .25),
-                            return_stanfit = FALSE,
-                            fitting_args = list()) {
+#' @examples 
+#' # To simulate a coalescent process with lagged sampling times
+#' sim <- sim_lag_coalescent(lag=-1, c=1, beta=2, scaling=0.05)
+#' fit <- fit_LGCP_lag(sim$events, max_lag=3, likelihood='coalescent')
+#' # Plot inferred and 'true' effective population size trajectory
+#' par(mfrow=c(3,1))
+#' plot_coal_result(fit, traj=sim$rate_functions$coal_fun, main="Lagged Preferential Sampling", ylim=c(0.5,15))
+#' # Plot non-Pref. sampling and PS without lag inferences``
+#' plot_BNPR(BNPR(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="No PS", ylim=c(0.5,15))
+#' plot_BNPR(BNPR_PS(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="PS without lag", ylim=c(0.5,15))
 
+fit_LGCP_lag <- function(events,
+                         max_lag,
+                         time_unit = 'Weeks',
+                         likelihood = 'poisson',
+                         n_bins = 100, 
+                         max_n_frequencies = 1023, 
+                         min_percent_padding = 10.0, 
+                         prob_quantiles = c(.025, .25),
+                         return_stanfit = FALSE,
+                         fitting_args = list()) {
+
+  if (all(sort(names(events)) == c('coal_times', 'n_sampled', 'samp_times')))
+    likelihood <- 'coalescent'
   stopifnot(any(likelihood == c('poisson', 'coalescent')))
+  stopifnot(max_lag > 0)
+  stopifnot(max(prob_quantiles) < 0.5)
   
   # set defaults for GMO and stan fitting
   fitting_defaults <- list(n_chains = 1, 
                            n_samples = 1000,
                            refresh = 10, 
                            gmo_iter = 100, 
-                           gmo_draws = 10, 
+                           gmo_draws = 15, 
                            gmo_tol = 1e-4,
                            gmo_eta = 1.,
-                           gmo_init_lengthscale = 10.,
+                           gmo_init_lengthscale = -1,
                            gmo_max_block_size = 256)
 
   # Override defaults if specified
@@ -46,7 +61,10 @@ fit_LGCP_lag <- function(events,
     fitting_defaults[[arg_name]] <- fitting_args[[arg_name]]
   }
   
-  stopifnot(max(prob_quantiles) < 0.5)
+  # adjust starting lengthscale value if unspecified
+  if (fitting_defaults$gmo_init_lengthscale <= 0) {
+    fitting_defaults$gmo_init_lengthscale <- 2 * max_lag
+  }
   
   # fill out probability quantiles with median and symmetric values
   prob_quantiles <- c(prob_quantiles, 0.5, rev(1 - prob_quantiles))
@@ -124,6 +142,7 @@ fit_LGCP_lag <- function(events,
                     FUN=function(x) quantile(x, probs=prob_quantiles))
     }
   }
+  print(quantiles$shifts)
   
   # Naive cross-correlation estimate of lag
   shifts_ccf <- rep(0, pars$n_series - 1)
