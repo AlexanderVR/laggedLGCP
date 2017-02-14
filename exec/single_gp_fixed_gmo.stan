@@ -10,6 +10,9 @@ data {
   int<lower=-1> counts[N];
   vector[N] offset;
   int<lower=0, upper=1> coalescent;
+  real<lower=0> prior_lengthscale_mean;
+  real<lower=0> prior_smoothness_mean;
+  real<lower=0> prior_smoothness_std;
   real<lower=0> delta;
   int<lower=0> npars;
   int<lower=0, upper=1> GMO_FLAG;
@@ -62,12 +65,12 @@ transformed parameters {
 model {
   to_vector(re) ~ normal(0, .5);
   to_vector(im) ~ normal(0, .5);
-  lengthscale ~ normal(0, 10);
+  lengthscale ~ lognormal(log(prior_lengthscale_mean), 1);
   target += log(lengthscale);
   sigma ~ lognormal(0, 1);
   target += log(sigma);
   mu ~ normal(0, 5);
-  nu ~ normal(0, 1);
+  nu ~ normal(prior_smoothness_mean, prior_smoothness_std);
   target += log(nu);
   
   counts[idx] ~ poisson_log(signs * (x[idx] * sigma + mu) + log(offset[idx]));
