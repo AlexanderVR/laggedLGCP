@@ -1,12 +1,10 @@
-#' Fitting 1-D Log-Gaussian Coalescent Process with lag and optional covariates
+#' Fit a binned 1-D Log-Gaussian Cox Process with lag.
 #' 
-#' @export
-#' 
-#' @param coal_data A list containing elements 'coal_times', 'samp_times', and 'n_sampled'
+#' @param binned_data A list of type BinnedData. Usually obtained from bin_coalescent_data() or bin_poisson_data().
 #' @param max_lag Lag parameter constrained to lie within [-max_lag, max_lag].
-#' @param covariate If specified, model lag between eff. pop. size and covariate, instead of sampling rate.
-#' @param time_unit Unit of measurement for the timestamps.
-#' @param n_bins Number of bins to use for binning the events.
+#' @param prior_lengthscale_mean Where to center the LogNormal(., 1) prior on the lengthscale parameter
+#' @param prior_smoothness_mean Mean of Normal prior for the smoothness parameter 'nu'.
+#' @param prior_smoothness_std Standard deviation of Normal prior for the smoothness parameter 'nu'.
 #' @param max_n_frequencies Maximum number of cosine and sine basis functions to use in spectral representation.
 #' @param min_percent_padding How far to extend the domain of the latent (periodic) Gaussian process.
 #' @param prob_quantiles Which quantiles of the latent parameters should be returned?
@@ -18,28 +16,27 @@
 #' @examples 
 #' # To simulate a coalescent process with lagged sampling times
 #' sim <- sim_lag_coalescent(lag=-1, c=1, beta=2, scaling=0.05)
-#' fit <- fit_LGCP_lag(sim$events, max_lag=3, likelihood='coalescent')
+#' binned_data <- bin_coalescent_data(sim$events)
+#' fit <- fit_binned_LGCP(sim$events, max_lag=3)
 #' # Plot inferred and 'true' effective population size trajectory
 #' par(mfrow=c(3,1))
 #' plot_coal_result(fit, traj=sim$rate_functions$coal_fun, main="Lagged Preferential Sampling", ylim=c(0.5,15))
 #' # Plot non-Pref. sampling and PS without lag inferences``
 #' plot_BNPR(BNPR(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="No PS", ylim=c(0.5,15))
 #' plot_BNPR(BNPR_PS(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="PS without lag", ylim=c(0.5,15))
+#' @export
+fit_binned_LGCP <- function(binned_data,
+                            max_lag,
+                            prior_lengthscale_mean = 1.0,
+                            prior_smoothness_mean = 1.0,
+                            prior_smoothness_std = 0.5,
+                            max_n_frequencies = 1023, 
+                            min_percent_padding = 10.0, 
+                            prob_quantiles = c(.025, .25),
+                            return_stanfit = FALSE,
+                            fitting_args = list()) {
 
-lag_coal_fit <- function(events,
-                         max_lag,
-                         covariate = NULL,
-                         time_unit = 'Weeks',
-                         n_bins = 100, 
-                         max_n_frequencies = 1023, 
-                         min_percent_padding = 10.0, 
-                         prob_quantiles = c(.025, .25),
-                         return_stanfit = FALSE,
-                         fitting_args = list()) {
-
-  # if (all(sort(names(events)) == c('coal_times', 'n_sampled', 'samp_times')))
-  #   likelihood <- 'coalescent'
-  # stopifnot(any(likelihood == c('poisson', 'coalescent')))
+  stopifnot(class(binned_data) == "BinnedData")
   stopifnot(max_lag > 0)
   stopifnot(max(prob_quantiles) < 0.5)
   
@@ -48,10 +45,9 @@ lag_coal_fit <- function(events,
                            n_samples = 1000,
                            refresh = 10, 
                            gmo_iter = 100, 
-                           gmo_draws = 15, 
+                           gmo_draws = 10, 
                            gmo_tol = 1e-4,
-                           gmo_eta = 1.,
-                           gmo_init_lengthscale = -1,
+                           gmo_eta = .5,
                            gmo_max_block_size = 256)
 
   # Override defaults if specified
@@ -60,80 +56,60 @@ lag_coal_fit <- function(events,
     fitting_defaults[[arg_name]] <- fitting_args[[arg_name]]
   }
   
-  # adjust starting lengthscale value if unspecified
-  if (fitting_defaults$gmo_init_lengthscale <= 0) {
-    fitting_defaults$gmo_init_lengthscale <- 2 * max_lag
-  }
-  
+  # add priors to data to send to stan
+  binned_data = c(binned_data, list(prior_lengthscale_mean=prior_lengthscale_mean,
+                                    prior_smoothness_mean=prior_smoothness_mean,
+                                    prior_smoothness_std=prior_smoothness_std))
+
   # fill out probability quantiles with median and symmetric values
   prob_quantiles <- c(prob_quantiles, 0.5, rev(1 - prob_quantiles))
-  
-  # Make sure event data is a list of numeric vectors
-  stopifnot(all(vapply(events, function(x) is.numeric(x) & is.vector(x), logical(1))))
 
-  # if have covariate extend the grid to accomodate
-  if (!is.null(covariate)) {
-    st <- min(c(covariate, 0))
-    fin <- max(c(covariate, events$samp_times, events$coal_times))
-  } else {
-    st <- NULL
-    fin <- NULL
-  }
-
-  # Bin the event data
-  pars <- bin_coal(events$coal_times, events$samp_times, events$n_sampled, n_bins, st=st, fin=fin)
-
-  # replace sampling times with covariate if specified
-  if (!is.null(covariate)) {
-    pars_cov <- bin_poisson(covariate, bins=pars$breaks)
-    pars$counts <- cbind(pars$counts[, 1], pars_cov$counts)
-    pars$offset <- cbind(pars$offset[, 1], pars_cov$offset) 
-  }
-      
   # Set the prior on lag parameter to N(mu = 0, sigma = max_lag / 2)
-  pars$max_lag <- max_lag
+  binned_data$max_lag <- max_lag
 
   # number of bins WITH padding -- must be a power of 2.
-  pars$Ntot <- nextpow2(pars$N, min_percent_padding)
+  binned_data$Ntot <- nextpow2(binned_data$N, min_percent_padding)
 
   # how many hyperparameters to optimize
-  pars$npars <- 4  
+  binned_data$npars <- 4  
 
   # number of frequencies to use
-  pars$n_nonzero_freq <- min(max_n_frequencies, floor(pars$Ntot/2 - 1))
+  binned_data$n_nonzero_freq <- min(max_n_frequencies, floor(binned_data$Ntot/2 - 1))
 
   # marginal process fitting function
   marginal_optimize <- function(k) {
-    ind_pars <- split_data(pars, k)
+    ind_pars <- split_data(binned_data, k)
     
-    if (k==2 && pars$coalescent) {
+    if (k==2 && binned_data$coalescent) {
       # second process (sampling) does not have the coalescent likelihood. 
       ind_pars$coalescent = 0
     }
     print(ind_pars$coalescent)
-    sfit=sampling(stanmodels$single_gp_fixed_gmo, data = c(ind_pars, list(GMO_FLAG = FALSE, fixed_phi = double())),
-         chains = 0, iter = 1)
+    
+    sfit = sampling(stanmodels$single_gp_fixed_gmo, data = c(ind_pars, list(GMO_FLAG = FALSE, fixed_phi = double())), chains = 0, iter = 1)
     opt_res <- gmo(full_model=sfit, 
                  data = ind_pars, 
                  iter = as.integer(fitting_defaults$gmo_iter),
                  tol = fitting_defaults$gmo_tol, 
                  eta = fitting_defaults$gmo_eta, 
                  draws = as.integer(fitting_defaults$gmo_draws), 
-                 init = get_init(ind_pars, lengthscale=fitting_defaults$gmo_init_lengthscale),
+                 init = get_init(ind_pars, 
+                                 lengthscale=prior_lengthscale_mean,
+                                 nu=prior_smoothness_mean),
                  max_block_size = fitting_defaults$gmo_max_block_size)
 
     u_opt <- opt_res$par
     return(c(mu=u_opt[1], sigma=exp(u_opt[2]), lengthscale=exp(u_opt[3]), nu=exp(u_opt[4])))
   }
   # optimize hyperparameters of each marginal latent GP
-  hyp_opt <- vapply(1:pars$n_series, FUN=marginal_optimize, FUN.VALUE=numeric(pars$npars))
+  hyp_opt <- vapply(1:binned_data$n_series, FUN=marginal_optimize, FUN.VALUE=numeric(binned_data$npars))
 
   # Package the hyperparameters together
-  pars <- c(pars, list(N_vis = sum(pars$counts >= 0)), as.list(data.frame(t(hyp_opt))))
+  binned_data <- c(binned_data, list(N_vis = sum(binned_data$counts >= 0)), as.list(data.frame(t(hyp_opt))))
 
   # Now train joint GP stan model, with the above fixed hyperparameters
   fit <- sampling(stanmodels$multiple_gp_nonsep_fixed, 
-                  data=pars, 
+                  data=binned_data, 
                   chains=fitting_defaults$n_chains, 
                   iter=fitting_defaults$n_samples, 
                   control=list(adapt_delta=0.95), 
@@ -157,14 +133,14 @@ lag_coal_fit <- function(events,
   print(quantiles$shifts)
   
   # Naive cross-correlation estimate of lag
-  shifts_ccf <- rep(0, pars$n_series - 1)
-  for (k in 1:(pars$n_series - 1)) {
-    crosscor <- ccf(pars$counts[, pars$n_series], pars$counts[,k], plot=FALSE)
-    shifts_ccf[k] <- crosscor$lag[which.max(crosscor$acf)] * pars$delta
+  shifts_ccf <- rep(0, binned_data$n_series - 1)
+  for (k in 1:(binned_data$n_series - 1)) {
+    crosscor <- ccf(binned_data$counts[, binned_data$n_series], binned_data$counts[,k], plot=FALSE)
+    shifts_ccf[k] <- crosscor$lag[which.max(crosscor$acf)] * binned_data$delta
   }
 
   # Data to return
-  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = pars, 
+  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = binned_data, 
               events=events)
   if (return_stanfit)
     res$stanfit <- fit
@@ -173,8 +149,8 @@ lag_coal_fit <- function(events,
 
 #' Return marginal GP hyperparameters fitted by optimizing the marginal likelihood.
 #' 
+#' @param res Result from fit_binned_LGCP() function.
+#'
 #' @export
-#' @param res Result from fit_LGCP_lag() function.
-#' 
 get_hypers <- function(res)
   return(res$data[c('mu', 'sigma', 'lengthscale', 'nu')])
