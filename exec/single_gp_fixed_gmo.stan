@@ -5,9 +5,9 @@ functions {
 data {
   int<lower=1> N; // number of bins without padding
   int<lower=4> Ntot; // number of bins with padding
-  int<lower=1> N_vis; // number of bins we observe for each process
+  int<lower=1> N_vis; // number of bins we have observed data for
   int<lower=1, upper=Ntot/2 - 1> n_nonzero_freq; // number of non-zero frequencies to use
-  int<lower=0> counts[N];
+  int<lower=-1> counts[N];
   vector[N] offset;
   int<lower=0, upper=1> coalescent;
   real<lower=0> delta;
@@ -17,9 +17,18 @@ data {
 }
 
 transformed data {
+  int idx[N_vis];  // indicies of observed data
+  int loc;
   real signs;
   // coalescence rate is proportional to 1/N_e(t)
   signs = (coalescent==1) ? -1 : 1;
+  loc = 1;
+  for (k in 1:N) {
+    if (counts[k] >= 0) {
+      idx[loc] = k;
+      loc = loc + 1;
+    }
+  }
 }
 
 parameters {
@@ -61,7 +70,7 @@ model {
   nu ~ normal(0, 1);
   target += log(nu);
   
-  counts[1:N_vis] ~ poisson_log(signs * (x[1:N_vis] * sigma + mu) + log(offset[1:N_vis]));
+  counts[idx] ~ poisson_log(signs * (x[idx] * sigma + mu) + log(offset[idx]));
   
 }
 

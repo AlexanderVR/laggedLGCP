@@ -9,8 +9,8 @@ split_data <- function(pars, j) {
 
   new_pars <- pars
   new_pars$offset <- pars$offset[, j]
-  new_pars$N_vis <- pars$N_vis[j]
   new_pars$counts <- pars$counts[, j]
+  new_pars$N_vis <- sum(new_pars$counts >= 0)
   return(new_pars)
 }
 

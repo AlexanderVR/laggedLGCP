@@ -1,4 +1,4 @@
-bin_coal <- function(coal_times, samp_times, n_sampled, n_bins) {
+bin_coal <- function(coal_times, samp_times, n_sampled, n_bins, st=NULL, fin=NULL) {
   # Approximation of Coalescent likelihood as a binned Poisson process
   #
   # Input: flu data of coalescent times, sampling times, number of lineages,
@@ -54,18 +54,42 @@ bin_coal <- function(coal_times, samp_times, n_sampled, n_bins) {
   # Grid size
   delta <- diff(grid)[1]
 
+  # extend grid if necessary
+  ext = extend_grid(st, fin, grid)
+
   # Compute the pairs of Poisson observations over grid points
-  counts <- matrix(0, init$ng, 2)
-  counts[, 1] <- y
-  counts[1:Nvis_samp, 2] <- new_samp_times[1:Nvis_samp]
+  counts <- matrix(-1, ext$n_grid, 2)
+  counts[ext$old_idx, 1] <- y
+  counts[ext$old_idx[1:Nvis_samp], 2] <- new_samp_times[1:Nvis_samp]
 
-  offset <- matrix(0, init$ng, 2)
-  offset[, 1] <- E
-  offset[, 2] <- delta
+  offset <- matrix(-1, ext$n_grid, 2)
+  offset[ext$old_idx, 1] <- E
+  offset[ext$old_idx[1:Nvis_samp], 2] <- delta
 
-  poisson_args <- list(counts=counts, breaks=grid, offset=offset, delta=delta,
-                       N_vis=c(init$ng, Nvis_samp), N=init$ng, n_series=2, coalescent=1)
+  poisson_args <- list(counts=counts, breaks=ext$new_grid, offset=offset, delta=delta, N=ext$n_grid, n_series=2, coalescent=1)
 
   return(poisson_args)
 
+}
+#' Extend existing grid, keeping grid width constant.
+#'
+#' @param st Maximum start time of new grid
+#' @param fin Minimum finish time of new grid
+#' @param grid Existing grid to extend
+extend_grid <- function(st, fin, grid) {
+  dt = diff(grid)[1]
+  if (is.null(st) || st == grid[1]) left <- c()
+  else {
+    stopifnot(st < 0)
+    left = -rev(1 : ceiling(-st / dt)) * dt
+  }
+
+  if (is.null(fin) || fin == grid[length(grid)]) right <- c()
+  else {
+    stopifnot(fin > max(grid))
+    right <- dt * (1 : ceiling(fin - max(grid)) / 2) + max(grid)
+  }
+  new_grid <- c(left, grid, right)
+  idx <- (1 : (length(grid) - 1)) + length(left)
+  return(list(left=left, right=right, new_grid=new_grid, old_idx=idx, n_grid=length(new_grid) - 1))
 }

@@ -15,7 +15,7 @@
 #' 
 #' @importFrom phylodyn cyclic_traj boombust_traj pref_sample coalsim BNPR BNPR_PS
 #' 
-sim_lag_coalescent <- function(lag=0, type='cyclic', c=50, beta=0.5, scaling=.1) {
+sim_lag_coalescent <- function(lag=0, type='cyclic', c=1, beta=2, scaling=.05) {
   
   if (type == 'cyclic')
     coal_fun <- function(t) cyclic_traj(t) * scaling
