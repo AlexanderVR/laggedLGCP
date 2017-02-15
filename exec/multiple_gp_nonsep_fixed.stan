@@ -57,7 +57,7 @@ transformed parameters {
   for (j in 1:n_series) {
     real shift;
 
-    shift = (j == n_series) ? 0. : shifts[j]; // last process has shift = 0.
+    shift = (j == 1) ? 0. : shifts[j - 1]; // first process has shift = 0.
     x[, j] = transform_to_matern(re[, j], im[, j], Ntot, nu[j], lengthscale[j], delta, shift);
   }
 
