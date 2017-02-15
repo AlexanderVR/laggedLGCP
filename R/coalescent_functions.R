@@ -32,7 +32,7 @@ sim_lag_coalescent <- function(lag=0, type='cyclic', c=1, beta=2, scaling=.05) {
   
   # now generate coalescent times given sampling times and lagged N_e(t) trajectory
   sim <- coalsim(samp_times=sampling_times, n_sampled=n_samples, traj=coal_fun)
-  events = sim[c('coal_times', 'samp_times', 'n_sampled')]
+  coal_data = sim[c('coal_times', 'samp_times', 'n_sampled')]
   
   return(list(coal_data=coal_data, lag=lag, type=type,
               rate_functions=list(coal_fun=coal_fun, samp_fun=samp_fun)))
@@ -44,7 +44,7 @@ sim_lag_coalescent <- function(lag=0, type='cyclic', c=1, beta=2, scaling=.05) {
 #' @param coal_data List containing attributes coalescent times, sampling times, number of lineages,
 #' and number of grid points.
 #'
-bin_coal <- function(coal_data, n_bins, st=NULL, fin=NULL) {
+bin_coal <- function(coal_data, n_bins=100, dt=NULL, st=NULL, fin=NULL) {
 
   # extract out data
   samp_times <- coal_data$samp_times
@@ -53,7 +53,11 @@ bin_coal <- function(coal_data, n_bins, st=NULL, fin=NULL) {
 
   # create grid of times
   all_times <- sort(c(samp_times, coal_times));
-  grid <- seq(0, max(all_times), length.out = n_bins)
+  if (is.null(dt))
+    grid <- seq(0, max(all_times), length.out = n_bins)
+  else {
+    grid <- seq(0, max(all_times) + dt, by=dt)
+  }
   midpts <- grid[-1] - diff(grid)/2
 
   # create coalescent likelihood for f_1 -- log effective pop size
@@ -124,13 +128,13 @@ bin_coal <- function(coal_data, n_bins, st=NULL, fin=NULL) {
 #' @param grid Existing grid to extend
 extend_grid <- function(st, fin, grid) {
   dt = diff(grid)[1]
-  if (is.null(st) || st == grid[1]) left <- c()
+  if (is.null(st) || st >= min(grid)) left <- c()
   else {
     stopifnot(st < 0)
     left = -rev(1 : ceiling(-st / dt)) * dt
   }
-
-  if (is.null(fin) || fin == grid[length(grid)]) right <- c()
+  
+  if (is.null(fin) || fin <= max(grid)) right <- c()
   else {
     stopifnot(fin > max(grid))
     right <- dt * (1 : ceiling(fin - max(grid)) / 2) + max(grid)

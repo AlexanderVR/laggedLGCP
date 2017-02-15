@@ -16,14 +16,15 @@
 #' @examples 
 #' # To simulate a coalescent process with lagged sampling times
 #' sim <- sim_lag_coalescent(lag=-1, c=1, beta=2, scaling=0.05)
-#' binned_data <- bin_coalescent_data(sim$events)
-#' fit <- fit_binned_LGCP(sim$events, max_lag=3)
+#' # Bin the events then fit the LGCP
+#' binned_data <- bin_coalescent_data(sim, n_bins=50)
+#' fit <- fit_binned_LGCP(binned_data, max_lag=3)
 #' # Plot inferred and 'true' effective population size trajectory
 #' par(mfrow=c(3,1))
-#' plot_coal_result(fit, traj=sim$rate_functions$coal_fun, main="Lagged Preferential Sampling", ylim=c(0.5,15))
+#' plot_coal_result(fit, coal_data= sim$coal_data, traj=sim$rate_functions$coal_fun, main="Lagged Preferential Sampling", ylim=c(0.5,15))
 #' # Plot non-Pref. sampling and PS without lag inferences``
-#' plot_BNPR(BNPR(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="No PS", ylim=c(0.5,15))
-#' plot_BNPR(BNPR_PS(sim$events, lengthout = 100), traj=sim$rate_functions$coal_fun, main="PS without lag", ylim=c(0.5,15))
+#' plot_BNPR(BNPR(sim$coal_data, lengthout = 100), traj=sim$rate_functions$coal_fun, main="No PS", ylim=c(0.5,15))
+#' plot_BNPR(BNPR_PS(sim$coal_data, lengthout = 100), traj=sim$rate_functions$coal_fun, main="PS without lag", ylim=c(0.5,15))
 #' @export
 fit_binned_LGCP <- function(binned_data,
                             max_lag,
@@ -80,13 +81,13 @@ fit_binned_LGCP <- function(binned_data,
   marginal_optimize <- function(k) {
     ind_pars <- split_data(binned_data, k)
     
-    if (k==2 && binned_data$coalescent) {
+    if (k > 1 && binned_data$coalescent) {
       # second process (sampling) does not have the coalescent likelihood. 
       ind_pars$coalescent = 0
     }
-    print(ind_pars$coalescent)
     
     sfit = sampling(stanmodels$single_gp_fixed_gmo, data = c(ind_pars, list(GMO_FLAG = FALSE, fixed_phi = double())), chains = 0, iter = 1)
+
     opt_res <- gmo(full_model=sfit, 
                  data = ind_pars, 
                  iter = as.integer(fitting_defaults$gmo_iter),
@@ -140,8 +141,7 @@ fit_binned_LGCP <- function(binned_data,
   }
 
   # Data to return
-  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = binned_data, 
-              events=events)
+  res <- list(quantiles = quantiles, shifts_ccf = shifts_ccf, data = binned_data)
   if (return_stanfit)
     res$stanfit <- fit
   return(res)

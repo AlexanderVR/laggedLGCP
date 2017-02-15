@@ -28,14 +28,14 @@ plot_results <- function(res, quant_level = 1) {
     if (res$data$coalescent) {
       if (j==1) {
         yl <- "Eff. Pop. Size"
-        points(res$events$coal_times, rep(0, length(res$events$coal_times)), pch=3)
+        points(res$coal_data$coal_times, rep(0, length(res$coal_data$coal_times)), pch=3)
       } else {
         yl <- "Sampling Rate"
-        points(res$events$samp_times, rep(0, length(res$events$samp_times)), pch=3)
+        points(res$coal_data$samp_times, rep(0, length(res$coal_data$samp_times)), pch=3)
       }
     } else {
       yl <- sprintf('Poisson rate for process %d', j)
-      points(res$events[[j]], rep(0, length(res$events[[j]])), pch=3)
+      points(res$coal_data[[j]], rep(0, length(res$coal_data[[j]])), pch=3)
     }
     title(ylab=yl)
     if (j==1) title(main = maintitle)
@@ -67,21 +67,18 @@ gp_plotting <- function(midpoints, quantiles){
 #' @export
 #' 
 #' @param fit Output of fit_LGCP_lag()
+#' #param coal_data Original coalescent data -- a list containing samp_times, coal_times, and n_sampled elements.
 #' @param traj True effective pop. size trajectory (if known)
 #' @param ... Other args to pass to plot_BNPR
 #' 
-plot_coal_result <- function(fit, traj = NULL, ...) {
+plot_coal_result <- function(fit, coal_data=NULL, traj = NULL, ...) {
   grid <- fit$data$breaks
   x <- grid[-1] - diff(grid) / 2
   effpop025 <- fit$quantiles$rates['2.5%', , 1]
   effpop975 <- fit$quantiles$rates['97.5%', , 1]
   effpop <- fit$quantiles$rates['50%', , 1]
-  samp_times <- fit$events$samp_times
-  coal_times <- fit$events$coal_times
-  n_sampled <- fit$events$n_sampled
   
-  res <- list(samp_times=samp_times, coal_times=coal_times, n_sampled=n_sampled,
-              x=x, grid=grid, effpop=effpop, effpop025=effpop025, effpop975=effpop975)
+  res <- c(coal_data, list(x=x, grid=grid, effpop=effpop, effpop025=effpop025, effpop975=effpop975))
   plot_BNPR(res, traj=traj, ...)
   
 }
