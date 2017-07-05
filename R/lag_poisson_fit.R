@@ -29,7 +29,7 @@
 
 fit_LGCP_lag <- function(events,
                          max_lag,
-                         time_unit = 'Weeks',
+                         time_unit = 'Years',
                          likelihood = 'poisson',
                          n_bins = 100, 
                          max_n_frequencies = 1023, 
@@ -74,9 +74,9 @@ fit_LGCP_lag <- function(events,
 
   # Bin the event data
   if (likelihood == 'poisson') {
-    pars <- bin_poisson(dat$events, n_bins=n_bins)
+    pars <- bin_poisson(dat$events, n_bins=n_bins, time_unit=time_unit)
   } else {  # have coalescent data 
-    pars <- bin_coal(events$coal_times, events$samp_times, events$n_sampled, n_bins)
+    pars <- bin_coal(events$coal_times, events$samp_times, events$n_sampled, n_bins, time_unit=time_unit)
   }
       
   # Set the prior on lag parameter to N(mu = 0, sigma = max_lag / 2)

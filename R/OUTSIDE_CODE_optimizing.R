@@ -1,8 +1,8 @@
-#optimizing_new_method <- function (object, max_block_size = 50, draws=0, ...) {
-    # Use rstan's optimizing function, but use faster (approximate)
-    # method to take samples from N(0, -H^{-1}), where
-    # H is the Hessian of log_p at the calculated (local) mode.
-    # Assume that H is block-diagonal with blocks of size "max_block_size"
+
+# Use rstan's optimizing function, but use faster (approximate)
+# method to take samples from N(0, -H^{-1}), where
+# H is the Hessian of log_p at the calculated (local) mode.
+# Assume that H is block-diagonal with blocks of size "max_block_size"
 
 setGeneric(name = 'optimizing_new_method',
            def = function(object, ...) {

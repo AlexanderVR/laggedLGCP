@@ -1,12 +1,11 @@
 Package: laggedLGCP
 Type: Package
-Title: What the package does (short line)
+Title: Inference for correlated and lagged log-Gaussian Cox processes and coalescent models
 Version: 1.0
 Date: 2017-02-05
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Authors@R: person("Alexander", "Vandenberg-Rodes", ,"alexvr@gmail.com", role = c("aut", "cre"))
+Description: A log-Gaussian Cox process is a Poisson point process model with inhomogeous rate function a log-Gaussian process. We consider *multiple* one-dimensional point processes with cross-correlation maximised at a particular unkonwn lag (delay). This package provides the tools to learn the lag and correlation parameters from the data, along with any other Gaussian process hyperparameters.
+License: MIT
 Depends:
     R (>= 3.0.2),
     Rcpp (>= 0.12.8),
